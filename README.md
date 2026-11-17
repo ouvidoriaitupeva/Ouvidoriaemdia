@@ -1,6 +1,6 @@
 # Painel Diário da Ouvidoria
 
-Aplicação estática para carregar a planilha diária da Ouvidoria diretamente no navegador. Nenhum arquivo é enviado a servidor: a base é guardada no armazenamento local do navegador e permanece disponível ao reabrir a página no mesmo navegador.
+Aplicação estática para carregar a planilha diária da Ouvidoria diretamente no navegador. Nenhum arquivo é enviado a servidor: a base é guardada no IndexedDB do navegador e permanece disponível ao reabrir a página no mesmo navegador, mesmo com textos longos.
 
 ## Publicação no GitHub Pages
 
@@ -19,4 +19,4 @@ Abra a página e arraste a planilha Excel. O arquivo deve conter a aba `Dados` e
 
 ## Observação de privacidade
 
-A aplicação não possui login, backend ou banco de dados. A base fica no armazenamento local do navegador; limpar os dados do site ou trocar de navegador/computador remove a base. Evite compartilhar a tela com dados pessoais.
+A aplicação não possui login, backend ou banco de dados remoto. A base fica no IndexedDB local do navegador; limpar os dados do site ou trocar de navegador/computador remove a base. Evite compartilhar a tela com dados pessoais.

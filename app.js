@@ -1,7 +1,10 @@
 const KEEP = ['Protocolo','Recebido em','Status','Secretaria','Assunto','Manifestação','Origem de cadastro','Resposta'];
 const REMOVE = ['Encaminhado','Solicitante','CPFCNPJ','Telefone 01','Telefone 02','Telefone 03','E-mail','Lido','CEP','Endereço','Número','Bairro','Referência','Região','Unidade','Grupo','Latitude','Longitude','Visível','Categoria','Funcionário público','Liberado pelo ouvidor','Protocolo anterior','Arquivos','Urgente','Dados sigilosos','Opinião','Justificativa','Prorrogado','Retificado','Cartão SUS','Finalizado em','Identificador','Materiais','Status da Associação','Reincidente'];
 const REQUIRED = KEEP;
-const STORAGE_KEY = 'ouvidoria-base-local-v1';
+const DB_NAME = 'ouvidoria-base-local';
+const DB_VERSION = 1;
+const DB_STORE = 'base';
+const DB_KEY = 'atual';
 let state = { rows: [], filtered: [], fileName: '', lastUpdated: '', duplicates: new Set() };
 const $ = id => document.getElementById(id);
 const dropZone = $('dropZone'), input = $('fileInput');
@@ -46,7 +49,7 @@ async function processFile(file) {
     const merged = new Map(state.rows.map(r => [r.Protocolo ? `p:${r.Protocolo}` : `sem:${r._index}:${r['Recebido em']}`, r]));
     importedRows.forEach((row, idx) => { const key = row.Protocolo ? `p:${row.Protocolo}` : `sem:${Date.now()}:${idx}`; merged.set(key, row); });
     state.rows = [...merged.values()].map((row, idx) => ({...row, _index: idx})).sort((a,b) => (b._dateKey || '').localeCompare(a._dateKey || '') || a._index-b._index);
-    state.lastUpdated = new Date().toISOString(); state.fileName = file.name; saveBase(); recomputeDuplicates();
+    state.lastUpdated = new Date().toISOString(); state.fileName = file.name; await saveBase(); recomputeDuplicates();
     populateFilters(); applyFilters();
     $('workspace').classList.remove('hidden'); $('emptyState').classList.add('hidden'); $('uploadStatus').textContent = `${state.rows.length} registros na base local`;
     $('fileName').textContent = 'Base local da Ouvidoria'; $('fileMeta').textContent = `${state.rows.length} registros · atualizada em ${new Date(state.lastUpdated).toLocaleString('pt-BR')} · arquivo: ${file.name}`;
@@ -54,8 +57,10 @@ async function processFile(file) {
   } catch(err) { $('uploadStatus').textContent = 'Falha na leitura'; notify(err.message || 'Não foi possível ler o arquivo.', 'error'); }
 }
 function recomputeDuplicates() { const counts = {}; state.rows.forEach(r => { const p = r.Protocolo || '(sem protocolo)'; counts[p] = (counts[p]||0)+1; }); state.duplicates = new Set(Object.keys(counts).filter(p => p !== '(sem protocolo)' && counts[p] > 1)); }
-function saveBase() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ rows: state.rows, lastUpdated: state.lastUpdated, fileName: state.fileName })); }
-function restoreBase() { try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); if(!saved?.rows?.length) return; state.rows = saved.rows; state.lastUpdated = saved.lastUpdated || ''; state.fileName = saved.fileName || ''; recomputeDuplicates(); populateFilters(); applyFilters(); $('workspace').classList.remove('hidden'); $('emptyState').classList.add('hidden'); $('uploadStatus').textContent = `${state.rows.length} registros na base local`; $('fileName').textContent = 'Base local da Ouvidoria'; $('fileMeta').textContent = `${state.rows.length} registros · última atualização ${state.lastUpdated ? new Date(state.lastUpdated).toLocaleString('pt-BR') : 'não informada'}`; notify('Base local restaurada. Faça uma nova importação para atualizar os protocolos do dia.', 'success'); } catch(e) { localStorage.removeItem(STORAGE_KEY); } }
+function openBaseDB() { return new Promise((resolve,reject) => { const request = indexedDB.open(DB_NAME, DB_VERSION); request.onupgradeneeded = () => { if(!request.result.objectStoreNames.contains(DB_STORE)) request.result.createObjectStore(DB_STORE); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); }
+function saveBase() { return openBaseDB().then(db => new Promise((resolve,reject) => { const tx = db.transaction(DB_STORE,'readwrite'); tx.objectStore(DB_STORE).put({ rows: state.rows, lastUpdated: state.lastUpdated, fileName: state.fileName }, DB_KEY); tx.oncomplete = () => { db.close(); resolve(); }; tx.onerror = () => { db.close(); reject(tx.error); }; })); }
+function loadBase() { return openBaseDB().then(db => new Promise((resolve,reject) => { const tx = db.transaction(DB_STORE,'readonly'); const request = tx.objectStore(DB_STORE).get(DB_KEY); request.onsuccess = () => { db.close(); resolve(request.result || null); }; request.onerror = () => { db.close(); reject(request.error); }; })); }
+async function restoreBase() { try { const saved = await loadBase(); if(!saved?.rows?.length) return; state.rows = saved.rows; state.lastUpdated = saved.lastUpdated || ''; state.fileName = saved.fileName || ''; recomputeDuplicates(); populateFilters(); applyFilters(); $('workspace').classList.remove('hidden'); $('emptyState').classList.add('hidden'); $('uploadStatus').textContent = `${state.rows.length} registros na base local`; $('fileName').textContent = 'Base local da Ouvidoria'; $('fileMeta').textContent = `${state.rows.length} registros · última atualização ${state.lastUpdated ? new Date(state.lastUpdated).toLocaleString('pt-BR') : 'não informada'}`; notify('Base local restaurada. Faça uma nova importação para atualizar os protocolos do dia.', 'success'); } catch(e) { notify('Não foi possível restaurar a base local neste navegador.', 'warning'); } }
 function unique(field) { return [...new Set(state.rows.map(r => r[field]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
 function populateFilters() {
   [['statusFilter','Status'],['secretaryFilter','Secretaria'],['originFilter','Origem de cadastro']].forEach(([id,field]) => { const el=$(id), first=el.options[0].text; el.innerHTML=`<option value="">${first}</option>`; unique(field).forEach(v => el.insertAdjacentHTML('beforeend',`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`)); });
