@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Painel local para tratamento diário de planilhas da Ouvidoria." />
+  <title>Painel Diário da Ouvidoria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Source+Serif+4:wght@600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="print.css" />
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-lockup">
+      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div>
+        <p class="eyebrow">Gestão interna</p>
+        <h1>Ouvidoria <em>em dia</em></h1>
+      </div>
+    </div>
+    <div class="privacy-pill"><span class="dot"></span>Processamento local</div>
+  </header>
+
+  <main class="shell">
+    <section class="upload-card" id="dropZone" tabindex="0" aria-label="Área para carregar a planilha">
+      <input id="fileInput" class="file-input" type="file" accept=".xlsx,.xls,.csv" />
+      <div class="upload-icon" aria-hidden="true">↥</div>
+      <div>
+        <h3>Arraste a planilha diária aqui</h3>
+        <p>ou <button class="text-button" id="chooseFile" type="button">escolha um arquivo Excel</button></p>
+        <small>Formato esperado: aba <strong>Dados</strong> com as colunas principais da Ouvidoria.</small>
+      </div>
+      <div class="upload-status" id="uploadStatus" role="status">Aguardando arquivo</div>
+    </section>
+
+    <div id="alertArea" aria-live="polite"></div>
+
+    <section class="workspace hidden" id="workspace">
+      <div class="file-line">
+        <div><span class="status-dot"></span><strong id="fileName">—</strong><span class="muted" id="fileMeta">—</span></div>
+        <div class="actions">
+          <button class="button secondary" id="exportCsv">Baixar CSV</button>
+          <button class="button secondary" id="exportXlsx">Baixar Excel</button>
+          <button class="button primary" id="printReport">Imprimir relatório</button>
+        </div>
+      </div>
+
+      <section class="metric-grid" id="metrics"></section>
+
+      <section class="insight-grid">
+        <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Leitura rápida</p><h3>Distribuição por status</h3></div></div><div id="statusBars" class="bars"></div></article>
+        <article class="panel chart-panel"><div class="panel-heading"><div><p class="eyebrow">Responsáveis</p><h3>Secretarias mais acionadas</h3></div></div><div id="secretaryBars" class="bars"></div></article>
+      </section>
+
+      <section class="panel records-panel">
+        <div class="panel-heading records-heading"><div><p class="eyebrow">Base tratada</p><h3>Manifestações do arquivo</h3><span class="muted" id="resultCount">0 registros</span></div><span class="duplicate-badge" id="duplicateBadge">0 duplicados</span></div>
+        <div class="filters">
+          <label class="search-field"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar protocolo, assunto ou texto..." /></label>
+          <label><span>De</span><input id="dateFrom" type="date" /></label>
+          <label><span>Até</span><input id="dateTo" type="date" /></label>
+          <label><span>Status</span><select id="statusFilter"><option value="">Todos</option></select></label>
+          <label><span>Secretaria</span><select id="secretaryFilter"><option value="">Todas</option></select></label>
+          <label><span>Origem</span><select id="originFilter"><option value="">Todas</option></select></label>
+          <button class="button ghost" id="clearFilters" type="button">Limpar</button>
+        </div>
+        <div class="table-wrap"><table><thead><tr><th>Protocolo</th><th>Recebido em</th><th>Status</th><th>Secretaria</th><th>Assunto</th><th>Origem</th><th>Resposta</th><th></th></tr></thead><tbody id="recordsBody"></tbody></table><div class="empty-table hidden" id="emptyTable">Nenhum registro corresponde aos filtros atuais.</div></div>
+      </section>
+    </section>
+
+    <section class="empty-state" id="emptyState"><div class="empty-orbit" aria-hidden="true">◎</div><h3>Nenhuma base carregada</h3><p>Arraste a planilha diária acima para iniciar ou atualizar a base local.</p></section>
+  </main>
+
+  <dialog id="detailDialog"><button class="dialog-close" id="closeDialog" aria-label="Fechar">×</button><div id="detailContent"></div></dialog>
+  <footer><span>Painel Diário da Ouvidoria</span><span>Base salva neste navegador</span></footer>
+  <script src="app.js"></script>
+</body>
+</html>
