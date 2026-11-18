@@ -15,7 +15,7 @@ Depois, em **Settings → Pages**, selecione **Deploy from a branch**, escolha a
 
 ## Uso
 
-Abra a página e arraste a planilha Excel. O arquivo deve conter a aba `Dados` e as colunas essenciais do padrão da Ouvidoria. A primeira importação cria a base; cada nova importação diária acrescenta protocolos novos e atualiza os protocolos já existentes pelo campo `Protocolo`. O painel preserva os oito campos definidos no projeto, sinaliza duplicidades, permite filtrar os registros e exporta a base tratada em CSV ou Excel. Para gerar um PDF, use o botão **Imprimir relatório** e selecione **Salvar como PDF** no diálogo do navegador.
+Abra a página e arraste a planilha Excel. O arquivo deve conter a aba `Dados` e as colunas essenciais do padrão da Ouvidoria. Cada importação diária substitui a base anterior pelo retrato do arquivo atual; isso evita somar históricos de vários dias. O campo `Finalizado em` é usado apenas internamente para validar a conclusão e não é exibido na exportação. São considerados não concluídos os status `Aberto`, `Agendado`, `Em andamento` e `Pendente`; um registro só é contado como concluído quando possui status `Concluído` e data preenchida em `Finalizado em`. O painel sinaliza duplicidades, calcula prazo de 30 dias corridos, permite filtrar protocolos que vencem em até 5 dias ou estão atrasados há mais de 30 dias e exporta a base tratada em CSV ou Excel. Para gerar um PDF, use o botão **Imprimir relatório** e selecione **Salvar como PDF** no diálogo do navegador.
 
 ## Observação de privacidade
 
