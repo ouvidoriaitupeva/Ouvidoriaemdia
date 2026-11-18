@@ -39,6 +39,13 @@
     <div id="alertArea" aria-live="polite"></div>
 
     <section class="workspace hidden" id="workspace">
+      <div class="app-layout">
+        <aside class="sidebar" aria-label="Navegação principal">
+          <p class="sidebar-label">Navegação</p>
+          <button class="nav-item active" data-page="overviewPage" type="button">Resumo e rankings</button>
+          <button class="nav-item" data-page="recordsPage" type="button">Manifestações do arquivo</button>
+        </aside>
+        <div class="page-stack">
       <div class="file-line">
         <div><span class="status-dot"></span><strong id="fileName">—</strong><span class="muted" id="fileMeta">—</span></div>
         <div class="actions">
@@ -48,7 +55,12 @@
           <button class="button primary" id="printReport">Imprimir relatório</button>
         </div>
       </div>
+      <div class="period-toolbar">
+        <div><p class="eyebrow">Período de análise</p><strong>Filtrar resumo, rankings e manifestações</strong></div>
+        <div class="period-controls"><label><span>Período</span><select id="periodFilter"><option value="all">Todo o período</option><option value="month">Mês atual</option><option value="3months">Últimos 3 meses</option><option value="6months">Últimos 6 meses</option><option value="year">Ano atual</option><option value="custom">Personalizado</option></select></label><label><span>De</span><input id="dateFrom" type="date" /></label><label><span>Até</span><input id="dateTo" type="date" /></label></div>
+      </div>
 
+      <section class="page-section" id="overviewPage">
       <section class="metric-grid" id="metrics"></section>
 
       <section class="deadline-panel panel">
@@ -62,13 +74,12 @@
         <article class="panel ranking-panel"><div class="panel-heading"><div><p class="eyebrow">Ranking completo</p><h3>Assuntos mais registrados</h3></div></div><div id="subjectRanking" class="ranking-list"></div></article>
       </section>
 
+      </section>
+      <section class="page-section hidden" id="recordsPage">
       <section class="panel records-panel">
         <div class="panel-heading records-heading"><div><p class="eyebrow">Base tratada</p><h3>Manifestações do arquivo</h3><span class="muted" id="resultCount">0 registros</span></div><span class="duplicate-badge" id="duplicateBadge">0 duplicados</span></div>
         <div class="filters">
           <label class="search-field"><span>⌕</span><input id="searchInput" type="search" placeholder="Buscar protocolo, assunto ou texto..." /></label>
-          <label><span>Período</span><select id="periodFilter"><option value="all">Todo o período</option><option value="today">Hoje</option><option value="7">Últimos 7 dias</option><option value="30">Últimos 30 dias</option><option value="month">Este mês</option><option value="custom">Personalizado</option></select></label>
-          <label><span>De</span><input id="dateFrom" type="date" /></label>
-          <label><span>Até</span><input id="dateTo" type="date" /></label>
           <label><span>Status</span><select id="statusFilter"><option value="">Todos</option></select></label>
           <label><span>Secretaria</span><select id="secretaryFilter"><option value="">Todas</option></select></label>
           <label><span>Origem</span><select id="originFilter"><option value="">Todas</option></select></label>
@@ -77,6 +88,9 @@
         </div>
         <div class="table-wrap"><table><thead><tr><th>Protocolo</th><th>Recebido em</th><th>Status</th><th>Secretaria</th><th>Assunto</th><th>Origem</th><th>Resposta</th><th></th></tr></thead><tbody id="recordsBody"></tbody></table><div class="empty-table hidden" id="emptyTable">Nenhum registro corresponde aos filtros atuais.</div></div>
       </section>
+      </section>
+      </div>
+      </div>
     </section>
 
     <section class="empty-state" id="emptyState"><div class="empty-orbit" aria-hidden="true">◎</div><h3>Nenhuma base carregada</h3><p>Arraste a planilha diária acima para iniciar ou atualizar a base local.</p></section>
@@ -84,6 +98,6 @@
 
   <dialog id="detailDialog"><button class="dialog-close" id="closeDialog" aria-label="Fechar">×</button><div id="detailContent"></div></dialog>
   <footer><span>Painel Diário da Ouvidoria</span><span>Base salva neste navegador</span></footer>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>
