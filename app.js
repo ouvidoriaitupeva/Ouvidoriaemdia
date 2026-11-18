@@ -1,6 +1,5 @@
 const KEEP = ['Protocolo','Recebido em','Status','Secretaria','Assunto','Manifestação','Origem de cadastro','Resposta'];
-const FINAL_FIELD = 'Finalizado em';
-const IMPORT_FIELDS = [...KEEP, FINAL_FIELD];
+const FINAL_FIELDS = ['Finalizado em','Finalizados em'];
 const ACTIVE_STATUSES = ['Aberto','Agendado','Em andamento','Pendente'];
 const CURRENT_MODE = 'single-file-v2';
 const REMOVE = ['Encaminhado','Solicitante','CPFCNPJ','Telefone 01','Telefone 02','Telefone 03','E-mail','Lido','CEP','Endereço','Número','Bairro','Referência','Região','Unidade','Grupo','Latitude','Longitude','Visível','Categoria','Funcionário público','Liberado pelo ouvidor','Protocolo anterior','Arquivos','Urgente','Dados sigilosos','Opinião','Justificativa','Prorrogado','Retificado','Cartão SUS','Finalizado em','Identificador','Materiais','Status da Associação','Reincidente'];
@@ -46,9 +45,10 @@ async function processFile(file) {
     const headers = matrix[0].map(normalize);
     const missing = REQUIRED.filter(c => !headers.includes(c));
     if(missing.length) throw new Error(`Colunas essenciais ausentes: ${missing.join(', ')}.`);
-    const indexes = Object.fromEntries(IMPORT_FIELDS.map(c => [c, headers.indexOf(c)]));
+    const indexes = Object.fromEntries(KEEP.map(c => [c, headers.indexOf(c)]));
+    const finalIndex = headers.findIndex(c => FINAL_FIELDS.includes(c));
     const importedRows = matrix.slice(1).filter(row => row.some(v => normalize(v))).map((row, idx) => {
-      const item = {}; KEEP.forEach(c => item[c] = normalize(row[indexes[c]])); item[FINAL_FIELD] = normalize(row[indexes[FINAL_FIELD]]); item._index = idx; item._dateKey = dateKey(item['Recebido em']); return item;
+      const item = {}; KEEP.forEach(c => item[c] = normalize(row[indexes[c]])); item._finalizadoEm = finalIndex >= 0 ? normalize(row[finalIndex]) : ''; item._index = idx; item._dateKey = dateKey(item['Recebido em']); return item;
     }).sort((a,b) => (b._dateKey || '').localeCompare(a._dateKey || '') || a._index-b._index);
     state.rows = importedRows.map((row, idx) => ({...row, _index: idx}));
     state.lastUpdated = new Date().toISOString(); state.fileName = file.name; await saveBase(); recomputeDuplicates();
@@ -58,7 +58,7 @@ async function processFile(file) {
     notify(`Importação concluída. A base anterior foi substituída pelo arquivo atual com ${importedRows.length} registros.`, 'success');
   } catch(err) { $('uploadStatus').textContent = 'Falha na leitura'; notify(err.message || 'Não foi possível ler o arquivo.', 'error'); }
 }
-function isCompleted(r) { return normalize(r.Status) === 'Concluído' && !!parseDate(r[FINAL_FIELD]); }
+function isCompleted(r) { return normalize(r.Status) === 'Concluído' && !!parseDate(r._finalizadoEm); }
 function isOpen(r) { return ACTIVE_STATUSES.includes(normalize(r.Status)); }
 function ageDays(r) { const d=parseDate(r['Recebido em']); if(!d) return null; return Math.floor((new Date(new Date().getFullYear(),new Date().getMonth(),new Date().getDate()) - new Date(d.getFullYear(),d.getMonth(),d.getDate())) / 86400000); }
 function deadlineState(r) { if(!isOpen(r)) return ''; const age=ageDays(r); if(age === null) return ''; if(age > 30) return 'overdue'; if(age >= 25) return 'due-soon'; return ''; }
