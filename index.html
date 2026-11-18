@@ -54,6 +54,7 @@
       <section class="deadline-panel panel">
         <div class="panel-heading"><div><p class="eyebrow">Controle de prazo</p><h3>Protocolos que exigem atenção</h3><span class="muted">Prazo padrão: 30 dias corridos após o recebimento · janela de atenção: 5 dias</span></div></div>
         <div class="deadline-grid"><button class="deadline-card warning" id="dueSoonCard" type="button"><span>Vencem em até 5 dias</span><strong id="dueSoonCount">0</strong><small>clique para filtrar</small></button><button class="deadline-card danger" id="overdueCard" type="button"><span>Atrasados há mais de 30 dias</span><strong id="overdueCount">0</strong><small>clique para filtrar</small></button></div>
+        <div class="deadline-lists"><div class="deadline-list"><div class="list-heading"><strong>Vencimentos por dia</strong><span class="muted">protocolo e data limite</span></div><div id="dueSoonList" class="deadline-list-body"></div></div><div class="deadline-list"><div class="list-heading"><strong>Atrasados por secretaria</strong><span class="muted">protocolo e tempo em atraso</span></div><div id="overdueList" class="deadline-list-body"></div></div></div>
       </section>
 
       <section class="insight-grid">
@@ -82,6 +83,6 @@
 
   <dialog id="detailDialog"><button class="dialog-close" id="closeDialog" aria-label="Fechar">×</button><div id="detailContent"></div></dialog>
   <footer><span>Painel Diário da Ouvidoria</span><span>Base salva neste navegador</span></footer>
-  <script src="app.js?v=3"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>
