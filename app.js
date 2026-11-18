@@ -79,8 +79,6 @@ function populateFilters() {
 }
 ['searchInput','dateFrom','dateTo','statusFilter','secretaryFilter','originFilter','deadlineFilter'].forEach(id => $(id).addEventListener('input', applyFilters));
 $('clearFilters').addEventListener('click',()=>{ ['searchInput','dateFrom','dateTo'].forEach(id=>$(id).value=''); ['statusFilter','secretaryFilter','originFilter','deadlineFilter'].forEach(id=>$(id).value=''); applyFilters(); });
-$('dueSoonCard').addEventListener('click',()=>{ $('deadlineFilter').value='due-soon'; applyFilters(); });
-$('overdueCard').addEventListener('click',()=>{ $('deadlineFilter').value='overdue'; applyFilters(); });
 $('clearBase').addEventListener('click', async ()=>{ await clearStoredBase(); state.rows=[]; state.filtered=[]; state.duplicates=new Set(); $('workspace').classList.add('hidden'); $('emptyState').classList.remove('hidden'); $('uploadStatus').textContent='Aguardando arquivo'; notify('Base local limpa. Carregue a planilha atual do dia.', 'success'); });
 function applyFilters() {
   const q = $('searchInput').value.toLowerCase().trim(), from=$('dateFrom').value, to=$('dateTo').value, status=$('statusFilter').value, secretary=$('secretaryFilter').value, origin=$('originFilter').value, deadline=$('deadlineFilter').value;
@@ -89,8 +87,8 @@ function applyFilters() {
 }
 function countBy(field, rows=state.rows) { return rows.reduce((acc,r)=>{const k=r[field]||'Não informado';acc[k]=(acc[k]||0)+1;return acc;},{}); }
 function renderAll() {
-  const rows=state.rows, filtered=state.filtered, open=rows.filter(isOpen), noResponse=open.filter(r=>!r.Resposta), completed=rows.filter(isCompleted), dueSoon=rows.filter(r=>deadlineState(r)==='due-soon'), overdue=rows.filter(r=>deadlineState(r)==='overdue');
-  $('metrics').innerHTML = [['Total no arquivo',rows.length,'teal','linhas da planilha'],['Não concluídos',open.length,'gold','Aberto · Agendado · Em andamento · Pendente'],['Concluídos válidos',completed.length,'teal','Concluído + data em Finalizado em'],['Não concluídos sem resposta',noResponse.length,'coral','sem resposta registrada']].map(x=>`<article class="metric ${x[2]}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><div class="metric-note">${x[3]}</div></article>`).join('');
+  const rows=state.rows, filtered=state.filtered, open=rows.filter(isOpen), completed=rows.filter(isCompleted), dueSoon=rows.filter(r=>deadlineState(r)==='due-soon'), overdue=rows.filter(r=>deadlineState(r)==='overdue');
+  $('metrics').innerHTML = [['Total no arquivo',rows.length,'teal','linhas da planilha'],['Não concluídos',open.length,'gold','Aberto · Agendado · Em andamento · Pendente'],['Concluídos válidos',completed.length,'teal','Concluído + data em Finalizado em']].map(x=>`<article class="metric ${x[2]}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><div class="metric-note">${x[3]}</div></article>`).join('');
   $('dueSoonCount').textContent=dueSoon.length; $('overdueCount').textContent=overdue.length; renderDeadlineLists(dueSoon, overdue);
   renderBars('statusBars',countBy('Status'),rows.length); renderBars('secretaryBars',countBy('Secretaria'),rows.length); renderTable(filtered); $('resultCount').textContent=`${filtered.length} de ${rows.length} registros`; $('duplicateBadge').textContent=`${state.duplicates.size} duplicado${state.duplicates.size===1?'':'s'}`;
 }
