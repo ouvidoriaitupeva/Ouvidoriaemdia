@@ -93,8 +93,8 @@ function applyFilters() {
 }
 function countBy(field, rows=state.rows) { return rows.reduce((acc,r)=>{const k=r[field]||'Não informado';acc[k]=(acc[k]||0)+1;return acc;},{}); }
 function renderAll() {
-  const rows=state.rows, filtered=state.filtered, open=rows.filter(isOpen), completed=rows.filter(isCompleted), dueSoon=rows.filter(r=>deadlineState(r)==='due-soon'), overdue=rows.filter(r=>deadlineState(r)==='overdue');
-  $('metrics').innerHTML = [['Total no arquivo',rows.length,'teal','linhas da planilha'],['Não concluídos',open.length,'gold','Aberto · Agendado · Em andamento · Pendente'],['Concluídos válidos',completed.length,'teal','Concluído + data em Finalizado em']].map(x=>`<article class="metric ${x[2]}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><div class="metric-note">${x[3]}</div></article>`).join('');
+  const rows=state.rows, filtered=state.filtered, open=filtered.filter(isOpen), completed=filtered.filter(isCompleted), dueSoon=filtered.filter(r=>deadlineState(r)==='due-soon'), overdue=filtered.filter(r=>deadlineState(r)==='overdue');
+  $('metrics').innerHTML = [['Protocolos registrados no período',filtered.length,'teal','registros recebidos dentro do filtro'],['Não concluídos no período',open.length,'gold','Aberto · Agendado · Em andamento · Pendente'],['Concluídos válidos no período',completed.length,'teal','Concluído + data em Finalizado em']].map(x=>`<article class="metric ${x[2]}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><div class="metric-note">${x[3]}</div></article>`).join('');
   $('dueSoonCount').textContent=dueSoon.length; $('overdueCount').textContent=overdue.length; renderDeadlineLists(dueSoon, overdue);
   renderRanking('secretaryRanking','Secretaria',filtered); renderRanking('neighborhoodRanking','_bairro',filtered); renderRanking('subjectRanking','Assunto',filtered); renderTable(filtered); $('resultCount').textContent=`${filtered.length} de ${rows.length} registros`; $('duplicateBadge').textContent=`${state.duplicates.size} duplicado${state.duplicates.size===1?'':'s'}`;
 }
