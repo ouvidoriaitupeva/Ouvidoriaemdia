@@ -80,12 +80,11 @@ function populateFilters() {
 }
 ['searchInput','dateFrom','dateTo','statusFilter','secretaryFilter','originFilter','deadlineFilter'].forEach(id => $(id).addEventListener('input', applyFilters));
 $('periodFilter').addEventListener('change',()=>{ setPeriod($('periodFilter').value); applyFilters(); });
-$('rankingStatusFilter').addEventListener('change', renderAll);
 function activatePage(pageId) { document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===pageId)); document.querySelectorAll('.page-section').forEach(page=>page.classList.toggle('hidden',page.id!==pageId)); const titles={overviewPage:'Resumo e rankings',recordsPage:'Manifestações do arquivo',settingsPage:'Configurações'}; $('pageTitle').textContent=titles[pageId]||'Painel diário'; $('periodToolbar').classList.toggle('hidden',pageId==='settingsPage'); }
 document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>activatePage(btn.dataset.page)));
 activatePage('settingsPage');
 ['dateFrom','dateTo'].forEach(id => $(id).addEventListener('change',()=>{ $('periodFilter').value='custom'; applyFilters(); }));
-$('clearFilters').addEventListener('click',()=>{ ['searchInput'].forEach(id=>$(id).value=''); $('periodFilter').value='year'; setPeriod('year'); ['statusFilter','secretaryFilter','originFilter','deadlineFilter','rankingStatusFilter'].forEach(id=>$(id).value=''); applyFilters(); });
+$('clearFilters').addEventListener('click',()=>{ ['searchInput'].forEach(id=>$(id).value=''); $('periodFilter').value='year'; setPeriod('year'); ['statusFilter','secretaryFilter','originFilter','deadlineFilter'].forEach(id=>$(id).value=''); applyFilters(); });
 $('clearBase').addEventListener('click', async ()=>{ await clearStoredBase(); state.rows=[]; state.filtered=[]; state.duplicates=new Set(); $('workspace').classList.remove('hidden'); $('uploadStatus').textContent='Aguardando arquivo'; $('settingsFileName').textContent='Nenhuma planilha carregada'; $('settingsFileMeta').textContent='Carregue a planilha diária para ver a quantidade de registros e a última atualização.'; activatePage('settingsPage'); notify('Base local limpa. Carregue a planilha atual do dia.', 'success'); });
 function inputDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
 function setPeriod(period) { const today=new Date(); today.setHours(0,0,0,0); if(period==='all'||period==='custom'){ if(period==='all'){ $('dateFrom').value=''; $('dateTo').value=''; } return; } let from=new Date(today), to=new Date(today); if(period==='month'){ from=new Date(today.getFullYear(),today.getMonth(),1); } else if(period==='3months'){ from=new Date(today); from.setMonth(from.getMonth()-3); } else if(period==='6months'){ from=new Date(today); from.setMonth(from.getMonth()-6); } else if(period==='year'){ from=new Date(today.getFullYear(),0,1); } $('dateFrom').value=inputDate(from); $('dateTo').value=inputDate(to); }
@@ -97,8 +96,8 @@ function applyFilters() {
 }
 function countBy(field, rows=state.rows) { return rows.reduce((acc,r)=>{const k=r[field]||'Não informado';acc[k]=(acc[k]||0)+1;return acc;},{}); }
 function renderAll() {
-  const rows=state.rows, filtered=state.filtered, open=filtered.filter(isOpen), completed=filtered.filter(isCompleted), dueSoon=filtered.filter(r=>deadlineState(r)==='due-soon'), overdue=filtered.filter(r=>deadlineState(r)==='overdue');
-  const rankingScope=$('rankingStatusFilter').value, rankingRows=rankingScope==='open'?open:(rankingScope==='completed'?completed:filtered);
+  const rows=state.rows, filtered=state.filtered, open=filtered.filter(isOpen), completed=filtered.filter(isCompleted), dueSoon=rows.filter(r=>deadlineState(r)==='due-soon'), overdue=rows.filter(r=>deadlineState(r)==='overdue');
+  const rankingRows=filtered;
   $('metrics').innerHTML = [['Protocolos registrados',filtered.length,'teal'],['Não concluídos',open.length,'gold'],['Concluídos válidos',completed.length,'teal']].map(x=>`<article class="metric ${x[2]}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div></article>`).join('');
   $('dueSoonCount').textContent=dueSoon.length; $('overdueCount').textContent=overdue.length; renderDeadlineLists(dueSoon, overdue);
   renderRanking('secretaryRanking','Secretaria',rankingRows); renderRanking('neighborhoodRanking','_bairro',rankingRows); renderRanking('subjectRanking','Assunto',rankingRows); renderTable(filtered); $('resultCount').textContent=`${filtered.length} de ${rows.length} registros`; $('duplicateBadge').textContent=`${state.duplicates.size} duplicado${state.duplicates.size===1?'':'s'}`;
