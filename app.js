@@ -9,7 +9,8 @@ const DB_NAME = 'ouvidoria-base-local';
 const DB_VERSION = 1;
 const DB_STORE = 'base';
 const DB_KEY = 'atual';
-let state = { rows: [], filtered: [], fileName: '', lastUpdated: '', duplicates: new Set() };
+let state = { rows: [], filtered: [], periodRows: [], fileName: '', lastUpdated: '', duplicates: new Set() };
+let metricScope = 'all';
 const $ = id => document.getElementById(id);
 const dropZone = $('dropZone'), input = $('fileInput');
 
@@ -82,8 +83,9 @@ function populateFilters() {
 }
 ['searchInput','dateFrom','dateTo','statusFilter','secretaryFilter','originFilter','deadlineFilter'].forEach(id => $(id).addEventListener('input', applyFilters));
 $('periodFilter').addEventListener('change',()=>{ setPeriod($('periodFilter').value); applyFilters(); });
-function activatePage(pageId) { document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===pageId)); document.querySelectorAll('.page-section').forEach(page=>page.classList.toggle('hidden',page.id!==pageId)); const titles={overviewPage:'Painel diário',recordsPage:'Manifestações do arquivo',settingsPage:'Configurações'}; $('pageTitle').textContent=titles[pageId]||'Painel diário'; $('periodToolbar').classList.toggle('hidden',pageId==='settingsPage'); }
+function activatePage(pageId) { document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.page===pageId)); document.querySelectorAll('.page-section').forEach(page=>page.classList.toggle('hidden',page.id!==pageId)); const titles={overviewPage:'Painel diário',recordsPage:'Manifestações do arquivo',attentionPage:'Protocolos que exigem atenção',settingsPage:'Configurações'}; $('pageTitle').textContent=titles[pageId]||'Painel diário'; $('periodToolbar').classList.toggle('hidden',pageId==='settingsPage'||pageId==='attentionPage'); }
 document.querySelectorAll('.nav-item').forEach(btn=>btn.addEventListener('click',()=>activatePage(btn.dataset.page)));
+document.addEventListener('click',e=>{const btn=e.target.closest('.metric-filter');if(btn){metricScope=btn.dataset.metric;renderAll();}});
 activatePage('settingsPage');
 ['dateFrom','dateTo'].forEach(id => $(id).addEventListener('change',()=>{ $('periodFilter').value='custom'; applyFilters(); }));
 $('clearFilters').addEventListener('click',()=>{ ['searchInput'].forEach(id=>$(id).value=''); $('periodFilter').value='month'; setPeriod('month'); ['statusFilter','secretaryFilter','originFilter','deadlineFilter'].forEach(id=>$(id).value=''); applyFilters(); });
@@ -93,22 +95,32 @@ function setPeriod(period) { const today=new Date(); today.setHours(0,0,0,0); if
 setPeriod('month');
 function applyFilters() {
   const q = $('searchInput').value.toLowerCase().trim(), from=$('dateFrom').value, to=$('dateTo').value, status=$('statusFilter').value, secretary=$('secretaryFilter').value, origin=$('originFilter').value, deadline=$('deadlineFilter').value;
-  state.filtered = state.rows.filter(r => { const hay=KEEP.map(k=>r[k]).join(' ').toLowerCase(); return (!q||hay.includes(q)) && (!from||r._dateKey>=from) && (!to||r._dateKey<=to) && (!status||r.Status===status) && (!secretary||r.Secretaria===secretary) && (!origin||r['Origem de cadastro']===origin) && (!deadline||deadlineState(r)===deadline); });
+  state.periodRows = state.rows.filter(r => (!from||r._dateKey>=from) && (!to||r._dateKey<=to));
+  state.filtered = state.periodRows.filter(r => { const hay=KEEP.map(k=>r[k]).join(' ').toLowerCase(); return (!q||hay.includes(q)) && (!status||r.Status===status) && (!secretary||r.Secretaria===secretary) && (!origin||r['Origem de cadastro']===origin) && (!deadline||deadlineState(r)===deadline); });
   renderAll();
 }
 function countBy(field, rows=state.rows) { return rows.reduce((acc,r)=>{const k=r[field]||'Não informado';acc[k]=(acc[k]||0)+1;return acc;},{}); }
 function renderAll() {
-  const rows=state.rows, filtered=state.filtered, open=filtered.filter(isOpen), completed=filtered.filter(isCompleted), dueSoon=rows.filter(r=>deadlineState(r)==='due-soon'), overdue=rows.filter(r=>deadlineState(r)==='overdue');
-  const rankingRows=filtered;
-  $('metrics').innerHTML = [['Protocolos registrados',filtered.length,'teal'],['Não concluídos',open.length,'gold'],['Concluídos válidos',completed.length,'teal']].map(x=>`<article class="metric ${x[2]}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div></article>`).join('');
+  const rows=state.rows, periodRows=state.periodRows, filtered=state.filtered, open=periodRows.filter(isOpen), completed=periodRows.filter(isCompleted), dueSoon=rows.filter(r=>deadlineState(r)==='due-soon'), overdue=rows.filter(r=>deadlineState(r)==='overdue');
+  const viewRows=metricScope==='open'?filtered.filter(isOpen):(metricScope==='completed'?filtered.filter(isCompleted):filtered);
+  $('metrics').innerHTML = [['Protocolados',periodRows.length,'blue','all'],['Em aberto',open.length,'orange','open'],['Concluído',completed.length,'green','completed']].map(x=>`<article class="metric ${x[2]} ${metricScope===x[3]?'selected':''}"><div class="metric-label">${x[0]}</div><div class="metric-value">${x[1]}</div><button class="metric-filter ${metricScope===x[3]?'active':''}" data-metric="${x[3]}" type="button">Filtrar</button></article>`).join('');
   $('dueSoonCount').textContent=dueSoon.length; $('overdueCount').textContent=overdue.length; renderDeadlineLists(dueSoon, overdue);
-  renderRanking('secretaryRanking','Secretaria',rankingRows); renderRanking('neighborhoodRanking','_bairro',rankingRows); renderRanking('subjectRanking','Assunto',rankingRows); renderTable(filtered); $('resultCount').textContent=`${filtered.length} de ${rows.length} registros`;
+  renderEvolution(periodRows); renderRanking('secretaryRanking','Secretaria',viewRows); renderRanking('neighborhoodRanking','_bairro',viewRows); renderRanking('subjectRanking','Assunto',viewRows); renderTable(viewRows); $('resultCount').textContent=`${viewRows.length} de ${periodRows.length} registros`;
 }
 function renderDeadlineLists(dueSoon, overdue) {
   const dueGroups = {}; dueSoon.sort((a,b)=>deadlineDateKey(a).localeCompare(deadlineDateKey(b))).forEach(r => { const key=deadlineDateKey(r)||'sem-data'; (dueGroups[key] ||= []).push(r); });
   $('dueSoonList').innerHTML = Object.keys(dueGroups).length ? Object.entries(dueGroups).map(([key,items]) => `<div class="deadline-group"><div class="deadline-group-title"><span>${key==='sem-data'?'Sem data':escapeHtml(deadlineDateLabel(items[0]))}</span><span>${items.length}</span></div>${items.map(r=>`<div class="deadline-item"><strong>${escapeHtml(r.Protocolo||'Sem protocolo')}</strong><small>${escapeHtml(r.Secretaria||'Sem secretaria')}</small></div>`).join('')}</div>`).join('') : '<div class="deadline-empty">Nenhum protocolo vence nos próximos 5 dias.</div>';
   const secGroups = {}; overdue.forEach(r => { const key=r.Secretaria||'Sem secretaria'; (secGroups[key] ||= []).push(r); });
   $('overdueList').innerHTML = Object.keys(secGroups).length ? Object.entries(secGroups).sort((a,b)=>b[1].length-a[1].length).map(([sec,items]) => `<div class="deadline-group"><div class="deadline-group-title"><span>${escapeHtml(sec)}</span><span>${items.length}</span></div>${items.sort((a,b)=>(ageDays(b)||0)-(ageDays(a)||0)).map(r=>`<div class="deadline-item"><strong>${escapeHtml(r.Protocolo||'Sem protocolo')}</strong><small>${escapeHtml(deadlineLabel(r))}</small></div>`).join('')}</div>`).join('') : '<div class="deadline-empty">Nenhum protocolo está atrasado há mais de 30 dias.</div>';
+}
+function renderEvolution(rows) {
+  const dates=rows.map(r=>r._dateKey).filter(Boolean).sort(); if(!dates.length){$('evolutionChart').innerHTML='<div class="ranking-empty">Nenhum protocolo no período selecionado.</div>';return;}
+  const start=dates[0], end=dates[dates.length-1], span=Math.round((new Date(end)-new Date(start))/86400000), monthly=span>45, buckets={};
+  rows.forEach(r=>{let key=r._dateKey;if(monthly)key=key.slice(0,7);(buckets[key] ||= {all:0,open:0,completed:0}).all++;if(isOpen(r))buckets[key].open++;if(isCompleted(r))buckets[key].completed++;});
+  const keys=Object.keys(buckets).sort(), W=760,H=230,L=42,R=16,T=18,B=38,max=Math.max(1,...keys.flatMap(k=>[buckets[k].all,buckets[k].open,buckets[k].completed])), x=i=>L+(i/(Math.max(1,keys.length-1)))*(W-L-R), y=v=>(H-B)-(v/max)*(H-B-T);
+  const line=(field,color)=>{const pts=keys.map((k,i)=>`${x(i).toFixed(1)},${y(buckets[k][field]).toFixed(1)}`).join(' ');return `<polyline points="${pts}" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>`+keys.map((k,i)=>`<circle cx="${x(i)}" cy="${y(buckets[k][field])}" r="3.5" fill="${color}"/>`).join('');};
+  const labels=keys.map((k,i)=>i%Math.max(1,Math.ceil(keys.length/8))===0?`<text x="${x(i)}" y="${H-12}" text-anchor="middle">${k.slice(monthly?0:5).replace('-', '/')}</text>`:'').join('');
+  $('evolutionChart').innerHTML=`<div class="chart-legend"><span><i class="legend-blue"></i>Protocolados</span><span><i class="legend-orange"></i>Em aberto</span><span><i class="legend-green"></i>Concluído</span></div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolução dos protocolos"><line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" class="chart-axis"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H-B}" class="chart-axis"/><text x="${L-8}" y="${T+4}" text-anchor="end">${max}</text>${line('all','#2d72c7')}${line('open','#df8b27')}${line('completed','#2b9b67')}${labels}</svg>`;
 }
 function renderRanking(id, field, rows) { const counts={}; rows.forEach(r=>{ const value=normalize(r[field])||'Não informado'; counts[value]=(counts[value]||0)+1; }); const entries=Object.entries(counts).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt-BR')); $(id).innerHTML=entries.length?entries.map(([label,n],i)=>`<div class="ranking-row"><div><strong title="${escapeHtml(label)}">${i+1}. ${escapeHtml(label)}</strong><small>${((n/rows.length)*100).toFixed(1).replace('.',',')}% do período</small></div><span class="ranking-count">${n}</span></div>`).join(''):'<div class="ranking-empty">Nenhum registro no período.</div>'; }
 function renderBars(id, counts, total) { const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]).slice(0,5); $(id).innerHTML=top.length?top.map(([label,n])=>`<div class="bar-row"><span class="bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</span><span class="bar-track"><span class="bar-fill" style="width:${Math.max(3,n/total*100)}%"></span></span><span class="bar-value">${n}</span></div>`).join(''):'<span class="muted">Sem dados suficientes.</span>'; }
